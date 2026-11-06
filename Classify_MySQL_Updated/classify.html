@@ -1,0 +1,1107 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Classify - Manajemen 250 Ruang Kelas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script>
+        tailwind.config = {
+            theme: { extend: { fontFamily: { sans: ['Inter', 'sans-serif'] } } }
+        }
+    </script>
+    <style>
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col relative">
+
+    <!-- LOADING DATABASE -->
+    <div id="loadingOverlay" class="fixed inset-0 z-[60] bg-slate-50 flex items-center justify-center">
+        <div class="text-center px-6">
+            <i class="fa-solid fa-database text-indigo-600 text-3xl animate-pulse"></i>
+            <p id="loadingText" class="text-sm font-semibold text-slate-600 mt-3">Menghubungkan ke database MySQL...</p>
+        </div>
+    </div>
+
+    <!-- HEADER -->
+    <header id="mainHeader" class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-600 to-indigo-500 flex items-center justify-center text-white font-bold text-xl shadow-md shadow-indigo-200">
+                    <i class="fa-solid fa-comments"></i>
+                </div>
+                <div>
+                    <span class="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-indigo-800">Classify</span>
+                    <span class="hidden sm:inline text-[10px] font-semibold px-2 py-0.5 ml-1 bg-indigo-100 text-indigo-700 rounded-full">250 Ruang (FT, FIK, FEBI, FISIP, FK)</span>
+                </div>
+            </div>
+
+            <div class="flex items-center space-x-4">
+                <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-lg bg-slate-100 text-slate-700 font-medium text-xs border border-slate-200">
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                    <span id="roleBadgeText">Mahasiswa</span>
+                </div>
+
+                <div class="relative group">
+                    <button class="flex items-center space-x-2 p-1.5 rounded-lg hover:bg-slate-100 transition">
+                        <div id="userAvatar" class="w-9 h-9 rounded-full bg-indigo-600 text-white text-xs font-bold flex items-center justify-center">AA</div>
+                        <div class="text-left hidden md:block">
+                            <p id="userNameText" class="text-xs font-semibold text-slate-800 leading-tight">-</p>
+                            <p id="userSubText" class="text-[10px] text-slate-500">-</p>
+                        </div>
+                        <i class="fa-solid fa-chevron-down text-slate-400 text-xs ml-1"></i>
+                    </button>
+                    <div class="absolute right-0 pt-2 w-48 hidden group-hover:block z-50">
+                        <div class="bg-white rounded-xl shadow-xl border border-slate-100 p-2">
+                            <button onclick="logout()" class="w-full text-left px-3 py-2 text-xs font-medium text-rose-600 hover:bg-rose-50 rounded-lg flex items-center space-x-2">
+                                <i class="fa-solid fa-right-from-bracket w-4"></i>
+                                <span>Keluar</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8">
+
+        <div id="toastContainer" class="fixed bottom-24 right-5 z-50 flex flex-col space-y-2 pointer-events-none"></div>
+
+        <!-- CHAT WIDGET (hanya setelah login) -->
+        <div id="chatWrap" class="hidden fixed bottom-6 right-6 z-40 flex flex-col items-end">
+            <button onclick="toggleChatWidget()" class="w-14 h-14 bg-emerald-500 hover:bg-emerald-600 text-white rounded-full shadow-2xl flex items-center justify-center transition-all transform hover:scale-110 order-2">
+                <i class="fa-brands fa-whatsapp text-3xl"></i>
+            </button>
+
+            <div id="chatBoxWidget" class="hidden w-80 sm:w-96 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden mb-3 flex flex-col h-[480px] order-1">
+                <div class="bg-emerald-600 text-white p-3.5 flex justify-between items-center shadow-md">
+                    <div class="flex items-center space-x-2.5">
+                        <div class="w-9 h-9 rounded-full bg-emerald-500 flex items-center justify-center text-white text-base border border-emerald-400">
+                            <i class="fa-solid fa-users"></i>
+                        </div>
+                        <div>
+                            <h4 class="font-bold text-xs leading-tight">Forum Negosiasi & Laporan</h4>
+                            <p class="text-[10px] text-emerald-100">Mahasiswa, Dosen & Petugas OB</p>
+                        </div>
+                    </div>
+                    <button onclick="toggleChatWidget()" class="text-emerald-100 hover:text-white text-base"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div class="flex border-b border-slate-100 bg-slate-50 text-[11px] font-semibold text-slate-500">
+                    <button onclick="switchChatTab('nego')" id="tabNego" class="flex-1 py-2 text-emerald-600 border-b-2 border-emerald-600 font-bold bg-white">Negosiasi Ruang</button>
+                    <button onclick="switchChatTab('ob')" id="tabOB" class="flex-1 py-2 hover:text-slate-700">Lapor Fasilitas OB</button>
+                </div>
+
+                <div id="chatMessages" class="flex-1 p-3 overflow-y-auto space-y-3 bg-slate-100 text-xs"></div>
+
+                <form onsubmit="handleSendChat(event)" class="p-2 bg-white border-t border-slate-200 flex items-center space-x-2">
+                    <input id="chatInputText" type="text" placeholder="Tulis pesan..." required class="flex-1 px-3 py-1.5 text-xs border border-slate-300 rounded-xl focus:outline-none focus:ring-1 focus:ring-emerald-500">
+                    <button type="submit" class="w-8 h-8 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl flex items-center justify-center transition shadow-sm">
+                        <i class="fa-solid fa-paper-plane text-xs"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- LOGIN -->
+        <section id="loginPage" class="min-h-[80vh] flex items-center justify-center">
+            <div class="w-full max-w-md bg-white p-8 rounded-2xl shadow-xl border border-slate-100">
+                <div class="text-center mb-6">
+                    <div class="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-tr from-indigo-600 to-indigo-500 items-center justify-center text-white font-bold text-2xl shadow-lg shadow-indigo-200 mb-3">
+                        <i class="fa-solid fa-comments"></i>
+                    </div>
+                    <h2 class="text-2xl font-bold text-slate-900">Masuk ke Classify</h2>
+                    <p class="text-xs text-slate-500 mt-1">Sistem Manajemen & Negosiasi Ruang Kelas Kampus</p>
+                </div>
+
+                <form onsubmit="handleLoginSubmit(event)" class="space-y-4" autocomplete="off">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Masuk sebagai</label>
+                        <select id="loginRoleSelect" onchange="updateLoginFields()" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 bg-white">
+                            <option value="mahasiswa">Mahasiswa</option>
+                            <option value="dosen">Dosen Pengampu</option>
+                            <option value="ob">Petugas OB / Sarpras</option>
+                            <option value="admin">Admin Akademik & Sarpras</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-700 mb-1">Nama</label>
+                        <input id="loginName" type="text" required placeholder="Nama lengkap" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+
+                    <div>
+                        <label id="loginCredLabel" class="block text-xs font-semibold text-slate-700 mb-1">NIM</label>
+                        <input id="loginCred" type="text" required placeholder="NIM" class="w-full px-3 py-2 text-sm border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+
+                    <p id="loginError" class="hidden text-xs font-semibold text-rose-600 bg-rose-50 border border-rose-100 rounded-lg px-3 py-2"></p>
+
+                    <button type="submit" class="w-full py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold text-sm rounded-xl transition shadow-md shadow-indigo-200">
+                        Masuk ke Beranda
+                    </button>
+                </form>
+
+                <p class="text-[10px] text-slate-400 text-center mt-5">Mahasiswa: nama & NIM · Dosen: nama & NISN · OB / Admin: nama & kata sandi</p>
+            </div>
+        </section>
+
+        <!-- BERANDA -->
+        <section id="berandaPage" class="space-y-6 hidden">
+
+            <div class="bg-gradient-to-r from-indigo-700 via-indigo-600 to-indigo-800 rounded-2xl p-6 text-white shadow-lg flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <span class="px-2.5 py-1 bg-white/20 backdrop-blur-md rounded-full text-xs font-medium">Sistem Monitoring Ruang Kelas</span>
+                    <h1 class="text-2xl font-bold mt-2" id="berandaWelcomeText">Katalog 250 Ruang Kelas Kampus</h1>
+                    <p class="text-indigo-100 text-xs mt-1">5 Gedung Fakultas (FT, FIK, FEBI, FISIP, FK) • 5 Lantai • 10 Kelas per Lantai</p>
+                </div>
+                <div id="bannerActionArea" class="flex gap-2"></div>
+            </div>
+
+            <div id="roleSpecificWidget" class="space-y-4"></div>
+
+            <div class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
+                <div class="flex flex-col gap-4 pb-4 border-b border-slate-100">
+                    <div>
+                        <h3 class="font-bold text-sm text-slate-800 flex items-center gap-2">
+                            <i class="fa-solid fa-building text-indigo-600"></i> Cari & Cek Ketersediaan Kelas
+                        </h3>
+                        <p class="text-[11px] text-slate-400">Menampilkan <span id="filteredCount" class="font-bold text-indigo-600">250</span> ruangan • status ruang mengikuti tanggal & sesi yang dipilih</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                            <span class="px-2 text-[10px] text-slate-400">Tanggal:</span>
+                            <input id="gridDate" type="date" onchange="setGridSlot()" class="bg-white text-slate-800 text-xs px-2 py-1 rounded-lg border-none focus:ring-1 focus:ring-indigo-500 font-semibold">
+                        </div>
+                        <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                            <span class="px-2 text-[10px] text-slate-400">Sesi:</span>
+                            <select id="gridSesi" onchange="setGridSlot()" class="bg-white text-slate-800 text-xs px-2 py-1 rounded-lg border-none focus:ring-1 focus:ring-indigo-500 font-semibold cursor-pointer"></select>
+                        </div>
+                        <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                            <span class="px-2 text-[10px] text-slate-400">Fakultas:</span>
+                            <select id="filterFakultasSelect" onchange="filterRooms('fakultas', this.value)" class="bg-white text-slate-800 text-xs px-2 py-1 rounded-lg border-none focus:ring-1 focus:ring-indigo-500 font-semibold cursor-pointer"></select>
+                        </div>
+                        <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                            <span class="px-2 text-[10px] text-slate-400">Jurusan:</span>
+                            <select id="filterProdiSelect" onchange="filterRooms('prodi', this.value)" class="bg-white text-slate-800 text-xs px-2 py-1 rounded-lg border-none focus:ring-1 focus:ring-indigo-500 font-semibold cursor-pointer max-w-[150px]">
+                                <option value="ALL">Semua Jurusan</option>
+                            </select>
+                        </div>
+                        <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-xl text-xs font-semibold">
+                            <span class="px-2 text-[10px] text-slate-400">Lantai:</span>
+                            <button data-lantai="ALL" onclick="filterRooms('lantai', 'ALL')" class="lantai-btn px-2.5 py-1 rounded-lg">Semua</button>
+                            <button data-lantai="1" onclick="filterRooms('lantai', '1')" class="lantai-btn px-2.5 py-1 rounded-lg">L1</button>
+                            <button data-lantai="2" onclick="filterRooms('lantai', '2')" class="lantai-btn px-2.5 py-1 rounded-lg">L2</button>
+                            <button data-lantai="3" onclick="filterRooms('lantai', '3')" class="lantai-btn px-2.5 py-1 rounded-lg">L3</button>
+                            <button data-lantai="4" onclick="filterRooms('lantai', '4')" class="lantai-btn px-2.5 py-1 rounded-lg">L4</button>
+                            <button data-lantai="5" onclick="filterRooms('lantai', '5')" class="lantai-btn px-2.5 py-1 rounded-lg">L5</button>
+                        </div>
+                        <div class="relative">
+                            <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-xs"></i>
+                            <input id="searchRoomInput" type="text" oninput="searchRooms(this.value)" placeholder="Cari: FIK-2-05, dosen, mata kuliah..." class="pl-8 pr-3 py-1.5 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 w-60">
+                        </div>
+                    </div>
+                </div>
+
+                <div id="classroomGrid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3 max-h-[550px] overflow-y-auto pr-1"></div>
+            </div>
+        </section>
+
+        <!-- MODAL PEMINJAMAN -->
+        <div id="bookingModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+            <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl border border-slate-100 overflow-hidden max-h-[95vh] overflow-y-auto">
+                <div class="bg-slate-900 px-6 py-4 text-white flex justify-between items-center">
+                    <h3 class="font-bold text-sm flex items-center gap-2">
+                        <i class="fa-solid fa-calendar-plus text-indigo-400"></i> Form Ajukan Peminjaman Kelas
+                    </h3>
+                    <button onclick="closeBookingModal()" class="text-slate-400 hover:text-white transition"><i class="fa-solid fa-xmark text-lg"></i></button>
+                </div>
+
+                <form onsubmit="handleBookingSubmit(event)" class="p-6 space-y-4">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Fakultas / Gedung</label>
+                            <select id="bookFaculty" onchange="updateProdiDropdown(this.value)" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white font-semibold"></select>
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Program Studi / Jurusan</label>
+                            <select id="bookProdi" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white font-semibold"></select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Tanggal</label>
+                            <input id="bookDate" type="date" required onchange="refreshBookingRooms()" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Waktu Sesi</label>
+                            <select id="bookTime" onchange="refreshBookingRooms()" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white"></select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Singkatan Kelas</label>
+                            <input id="bookClassShort" type="text" placeholder="misal: 3 INF A" required class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Ruang Kelas (yang kosong)</label>
+                            <select id="bookRoomSelect" required class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white font-semibold"></select>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Mata Kuliah</label>
+                            <input id="bookSubject" type="text" placeholder="misal: Pemrograman Berbasis Objek" required class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500">
+                        </div>
+                        <div>
+                            <label class="block text-[11px] font-bold text-slate-700 mb-1">Dosen Pengampu</label>
+                            <select id="bookLecturer" class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500 bg-white"></select>
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-700 mb-1">Keperluan Peminjaman</label>
+                        <textarea id="bookReason" rows="2" placeholder="Jelaskan alasan peminjaman (misal: Kuliah Pengganti)..." required class="w-full px-3 py-2 text-xs border border-slate-300 rounded-xl focus:ring-2 focus:ring-indigo-500"></textarea>
+                    </div>
+
+                    <div class="flex justify-end space-x-2 pt-2 border-t border-slate-100">
+                        <button type="button" onclick="closeBookingModal()" class="px-4 py-2 bg-slate-100 text-slate-700 font-bold text-xs rounded-xl hover:bg-slate-200 transition">Batal</button>
+                        <button type="submit" class="px-4 py-2 bg-indigo-600 text-white font-bold text-xs rounded-xl hover:bg-indigo-700 shadow-md shadow-indigo-200 transition">Kirim Pengajuan</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        'use strict';
+
+        // ==========================================
+        // KONSTANTA & DATA AWAL
+        // ==========================================
+        const API_URL = 'api.php';
+        // Tanggal acuan data awal (hari ini = 20 kelas, minggu ini = 137, bulan ini = 498)
+        const TANGGAL_ACUAN = '2026-11-06';
+        const SESI = ['08:00 - 10:30 WIB', '10:30 - 13:00 WIB', '13:00 - 15:30 WIB', '15:30 - 18:00 WIB'];
+
+        const GEDUNG = {
+            FT:    { nama: 'Fakultas Teknik (FT)', kode: 'TE', prodi: ['S1 Teknik Elektro', 'S1 Teknik Mesin', 'S1 Teknik Sipil'], matkul: ['Rangkaian Listrik', 'Mekanika Teknik', 'Termodinamika', 'Struktur Beton'] },
+            FIK:   { nama: 'Fakultas Ilmu Komputer (FIK)', kode: 'INF', prodi: ['S1 Teknik Informatika', 'S1 Sistem Informasi', 'D3 Manajemen Informatika'], matkul: ['Pemrograman Berbasis Objek', 'Basis Data', 'Jaringan Komputer', 'Rekayasa Perangkat Lunak'] },
+            FEBI:  { nama: 'Fakultas Ekonomi & Bisnis (FEBI)', kode: 'AKS', prodi: ['S1 Akuntansi Syariah', 'S1 Ekonomi Islam', 'S1 Perbankan Syariah'], matkul: ['Akuntansi Keuangan', 'Ekonomi Mikro', 'Fiqh Muamalah', 'Manajemen Perbankan'] },
+            FISIP: { nama: 'Fakultas Ilmu Sosial & Politik (FISIP)', kode: 'IKM', prodi: ['S1 Ilmu Komunikasi', 'S1 Hubungan Internasional', 'S1 Sosiologi'], matkul: ['Teori Komunikasi', 'Pengantar Sosiologi', 'Diplomasi Modern', 'Metode Penelitian Sosial'] },
+            FK:    { nama: 'Fakultas Kedokteran & Farmasi (FK)', kode: 'FAR', prodi: ['S1 Kedokteran Umum', 'S1 Farmasi', 'D3 Kebidanan'], matkul: ['Anatomi', 'Farmakologi', 'Fisiologi', 'Biokimia'] }
+        };
+
+        // ==========================================
+        // HELPER
+        // ==========================================
+        const $ = id => document.getElementById(id);
+        const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+        const norm = s => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        const pad = n => String(n).padStart(2, '0');
+        const iso = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+        const fromIso = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+        const fmtDate = s => fromIso(s).toLocaleDateString('id-ID', { day: '2-digit', month: 'short', year: 'numeric' });
+        const STATUS_LABEL = { Approved: 'Disetujui', Pending: 'Menunggu', Rejected: 'Ditolak' };
+        const STATUS_CLASS = { Approved: 'bg-emerald-100 text-emerald-700', Pending: 'bg-amber-100 text-amber-700', Rejected: 'bg-rose-100 text-rose-700' };
+        const statusBadge = s => `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${STATUS_CLASS[s] || 'bg-slate-100 text-slate-600'}">${STATUS_LABEL[s] || esc(s)}</span>`;
+
+        async function apiRequest(action, payload = null) {
+            const options = { method: payload === null ? 'GET' : 'POST', credentials: 'same-origin', headers: {} };
+            if (payload !== null) {
+                options.headers['Content-Type'] = 'application/json';
+                options.body = JSON.stringify(payload);
+            }
+            const response = await fetch(`${API_URL}?action=${encodeURIComponent(action)}`, options);
+            let result;
+            try { result = await response.json(); }
+            catch { throw new Error('Respons server bukan JSON. Periksa api.php dan konfigurasi PHP.'); }
+            if (!response.ok || result.error) throw new Error(result.error || `Permintaan gagal (${response.status}).`);
+            return result;
+        }
+
+        function rangeOf(period, s) {
+            const d = fromIso(s);
+            if (period === 'daily') return [s, s];
+            if (period === 'weekly') {
+                const dow = (d.getDay() + 6) % 7; // Senin = 0
+                const mon = new Date(d); mon.setDate(d.getDate() - dow);
+                const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+                return [iso(mon), iso(sun)];
+            }
+            return [iso(new Date(d.getFullYear(), d.getMonth(), 1)), iso(new Date(d.getFullYear(), d.getMonth() + 1, 0))];
+        }
+        function countWeekdays(a, b) {
+            let n = 0;
+            for (const d = fromIso(a); d <= fromIso(b); d.setDate(d.getDate() + 1)) {
+                const w = d.getDay();
+                if (w !== 0 && w !== 6) n++;
+            }
+            return n;
+        }
+
+        // ==========================================
+        // OOP: USER (abstract) + turunan
+        // ==========================================
+        class User {
+            constructor(id, nama, role, roleKey) {
+                if (new.target === User) throw new Error('Class User bersifat abstrak.');
+                this.id = id;
+                this.nama = nama;
+                this.role = role;
+                this.roleKey = roleKey;
+            }
+            get canBook() { return false; }
+            get initials() {
+                const p = this.nama.replace(/[^A-Za-z ]/g, ' ').trim().split(/\s+/);
+                return ((p[0] || '?')[0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
+            }
+            get chatLabel() { return this.nama; }
+            subtext() { return this.role; }
+        }
+        class Mahasiswa extends User {
+            constructor(row) {
+                super(row.nim, row.nama, 'Mahasiswa', 'mahasiswa');
+                this.nim = row.nim; this.fakultas = row.fakultas; this.prodi = row.prodi; this.kelas = row.kelas;
+            }
+            get canBook() { return true; }
+            subtext() { return `${this.kelas} • ${this.prodi}`; }
+        }
+        class Dosen extends User {
+            constructor(row) {
+                super(row.nisn, row.nama, 'Dosen Pengampu', 'dosen');
+                this.nisn = row.nisn; this.fakultas = row.fakultas;
+            }
+            get canBook() { return true; }
+            get chatLabel() { return `${this.nama} (Dosen)`; }
+            subtext() { return `Dosen Pengampu ${this.fakultas}`; }
+        }
+        class PetugasOB extends User {
+            constructor(row) {
+                super(row.id, row.nama, 'Petugas OB / Sarpras', 'ob');
+                this.areaTugas = row.area_tugas;
+            }
+            get chatLabel() { return `${this.nama} (Petugas OB)`; }
+            subtext() { return `Petugas Sarpras (${this.areaTugas})`; }
+        }
+        class Admin extends User {
+            constructor(row) {
+                super(row.id, row.nama, 'Admin Sarpras', 'admin');
+                this.jabatan = row.jabatan;
+            }
+            get chatLabel() { return `${this.nama} (Admin)`; }
+            subtext() { return this.jabatan; }
+        }
+
+        // ==========================================
+        // OOP: RuangKelas (enkapsulasi) & Peminjaman
+        // ==========================================
+        class RuangKelas {
+            #booking = null; // private field
+            constructor(row) {
+                this.code = row.kode; this.gedung = row.gedung; this.lantai = row.lantai;
+                this.number = row.nomor; this.capacity = row.kapasitas;
+            }
+            get isOccupied() { return this.#booking !== null; }
+            get booking() { return this.#booking; }
+            occupy(b) {
+                if (this.#booking) throw new Error(`Ruangan ${this.code} sedang digunakan!`);
+                this.#booking = b;
+            }
+            release() { this.#booking = null; }
+        }
+
+        class Peminjaman {
+            constructor(row) {
+                this.id = row.id; this.pemohonRole = row.pemohon_role; this.pemohonId = row.pemohon_id;
+                this.pemohonNama = row.pemohon_nama; this.fakultas = row.fakultas; this.prodi = row.prodi;
+                this.kelas = row.kelas; this.dosen = row.dosen; this.mataKuliah = row.mata_kuliah;
+                this.ruang = row.ruang; this.tanggal = row.tanggal; this.sesi = row.sesi;
+                this.keperluan = row.keperluan; this.status = row.status;
+            }
+        }
+
+        // ==========================================
+        // DATA APLIKASI: diambil dari MySQL melalui api.php
+        // Objek data ini hanya cache tampilan sementara, bukan database lokal.
+        // ==========================================
+        class SistemClassify {
+            constructor(snapshot) {
+                this.data = snapshot;
+                this.currentUser = null;
+                this.rooms = (snapshot.ruang_kelas || []).map(r => new RuangKelas(r));
+                this.pendingRooms = new Set();
+                this.activeChatTab = 'nego';
+                this.filterFakultas = 'ALL';
+                this.filterLantai = 'ALL';
+                this.filterProdi = 'ALL';
+                this.searchQuery = '';
+                this.gridDate = TANGGAL_ACUAN;
+                this.gridSesi = SESI[0];
+                this.reportPeriod = 'daily';
+                this.reportDate = TANGGAL_ACUAN;
+                this.reportPage = 1;
+            }
+
+            async refresh() {
+                this.data = await apiRequest('snapshot');
+                this.rooms = (this.data.ruang_kelas || []).map(r => new RuangKelas(r));
+                return this.data;
+            }
+
+            async login(role, name, cred) {
+                const result = await apiRequest('login', { role, name, cred });
+                const row = result.row;
+                this.currentUser = role === 'mahasiswa' ? new Mahasiswa(row)
+                    : role === 'dosen' ? new Dosen(row)
+                    : role === 'ob' ? new PetugasOB(row) : new Admin(row);
+                await this.refresh();
+                return this.currentUser;
+            }
+
+            setUser(role, row) {
+                this.currentUser = role === 'mahasiswa' ? new Mahasiswa(row)
+                    : role === 'dosen' ? new Dosen(row)
+                    : role === 'ob' ? new PetugasOB(row) : new Admin(row);
+            }
+
+            refreshOccupancy() {
+                const rows = (this.data.peminjaman || []).filter(r => r.tanggal === this.gridDate && r.sesi === this.gridSesi && ['Approved','Pending'].includes(r.status));
+                this.pendingRooms = new Set(rows.filter(r => r.status === 'Pending').map(r => r.ruang));
+                const approved = new Map(rows.filter(r => r.status === 'Approved').map(r => [r.ruang, new Peminjaman(r)]));
+                this.rooms.forEach(r => { r.release(); const b = approved.get(r.code); if (b) r.occupy(b); });
+            }
+
+            async addBooking(b) {
+                await apiRequest('booking_create', {
+                    fakultas: b.fakultas, prodi: b.prodi, kelas: b.kelas, dosen: b.dosen,
+                    mata_kuliah: b.mataKuliah, ruang: b.ruang, tanggal: b.tanggal, sesi: b.sesi, keperluan: b.keperluan
+                });
+                await this.refresh();
+            }
+
+            async setBookingStatus(id, approve) {
+                const row = (this.data.peminjaman || []).find(r => r.id === id);
+                await apiRequest('booking_status', { id, approve });
+                await this.refresh();
+                return row || { ruang: '' };
+            }
+        }
+
+        let appSystem = null;
+
+        // ==========================================
+        // RENDER UI
+        // ==========================================
+        function populateStaticSelects() {
+            $('filterFakultasSelect').innerHTML = '<option value="ALL">Semua Fakultas</option>' +
+                Object.entries(GEDUNG).map(([k, v]) => `<option value="${k}">${esc(v.nama)}</option>`).join('');
+            $('bookFaculty').innerHTML = Object.entries(GEDUNG).map(([k, v]) => `<option value="${k}">${esc(v.nama)}</option>`).join('');
+            const sesiOpts = SESI.map(s => `<option value="${s}">${s}</option>`).join('');
+            $('gridSesi').innerHTML = sesiOpts;
+            $('bookTime').innerHTML = sesiOpts;
+            $('gridDate').value = appSystem.gridDate;
+            updateProdiFilterDropdown('ALL');
+            highlightLantai();
+        }
+
+        function updateLoginFields() {
+            const role = $('loginRoleSelect').value;
+            const cfg = {
+                mahasiswa: ['NIM', 'NIM', 'text'],
+                dosen: ['NISN', 'NISN', 'text'],
+                ob: ['Kata Sandi', 'Kata sandi', 'password'],
+                admin: ['Kata Sandi', 'Kata sandi', 'password']
+            }[role];
+            $('loginCredLabel').textContent = cfg[0];
+            $('loginCred').placeholder = cfg[1];
+            $('loginCred').type = cfg[2];
+            $('loginCred').value = '';
+            $('loginError').classList.add('hidden');
+        }
+
+        function updateUIState() {
+            const user = appSystem.currentUser;
+            if (!user) return;
+            $('userNameText').textContent = user.nama;
+            $('userSubText').textContent = user.subtext();
+            $('userAvatar').textContent = user.initials;
+            $('roleBadgeText').textContent = user.role;
+
+            $('bannerActionArea').innerHTML = user.canBook
+                ? `<button onclick="openBookingModal()" class="px-4 py-2.5 bg-white text-indigo-700 font-semibold text-xs rounded-xl hover:bg-indigo-50 transition shadow-md flex items-center gap-2"><i class="fa-solid fa-calendar-plus"></i> Ajukan Peminjaman</button>`
+                : `<span class="px-3 py-2 bg-indigo-900/60 text-indigo-200 text-xs font-semibold rounded-xl border border-indigo-500/30"><i class="fa-solid fa-lock text-amber-400 mr-1"></i> Peminjaman khusus Mahasiswa & Dosen</span>`;
+
+            renderBerandaWidget();
+            renderClassroomGrid();
+        }
+
+        function renderBerandaWidget() {
+            const c = $('roleSpecificWidget');
+            const u = appSystem.currentUser;
+            if (!c || !u) return;
+            const data = appSystem.data;
+
+            if (u.roleKey === 'mahasiswa' || u.roleKey === 'dosen') {
+                if (u.roleKey === 'dosen') {
+                    const allRows = (data.peminjaman || []).filter(b => b.dosen === u.nama && b.status === 'Approved' && b.tanggal >= TANGGAL_ACUAN).sort((a,b) => a.tanggal.localeCompare(b.tanggal) || a.sesi.localeCompare(b.sesi));
+                    const rows = allRows.slice(0, 15);
+                    const total = allRows.length;
+                    c.innerHTML = `
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                            <h4 class="font-bold text-xs text-slate-800"><i class="fa-solid fa-chalkboard-user text-indigo-600 mr-1"></i> Jadwal Mengajar Saya <span class="text-slate-400 font-medium">(${rows.length} terdekat dari ${total} jadwal)</span></h4>
+                            <div class="space-y-2 max-h-72 overflow-y-auto">
+                                ${rows.length === 0 ? '<p class="text-xs text-slate-400 italic">Belum ada jadwal mengajar.</p>' : rows.map(b => `
+                                    <div class="flex justify-between items-center text-xs p-2.5 bg-indigo-50/50 rounded-lg border border-indigo-100">
+                                        <div>
+                                            <span class="font-bold text-indigo-700">${esc(b.ruang)}</span> [${esc(b.kelas)}] - <strong>${esc(b.mata_kuliah)}</strong>
+                                            <p class="text-[10px] text-slate-500">${esc(b.prodi)} | ${fmtDate(b.tanggal)} • ${esc(b.sesi)}</p>
+                                        </div>
+                                        <span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700">Terjadwal</span>
+                                    </div>`).join('')}
+                            </div>
+                        </div>`;
+                    return;
+                }
+                const allRows = (data.peminjaman || []).filter(b => b.pemohon_id === u.id).sort((a,b) => String(b.dibuat_pada || b.id).localeCompare(String(a.dibuat_pada || a.id)));
+                const rows = allRows.slice(0, 10);
+                const total = allRows.length;
+                c.innerHTML = `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-2">
+                        <h4 class="font-bold text-xs text-slate-800"><i class="fa-solid fa-clock-rotate-left text-indigo-600 mr-1"></i> Status Peminjaman Saya <span class="text-slate-400 font-medium">(${rows.length} terbaru dari ${total})</span></h4>
+                        <div class="space-y-2 max-h-72 overflow-y-auto">
+                            ${rows.length === 0 ? '<p class="text-xs text-slate-400 italic">Belum ada pengajuan.</p>' : rows.map(b => `
+                                <div class="flex justify-between items-center text-xs p-2.5 bg-slate-50 rounded-lg border border-slate-100">
+                                    <div>
+                                        <span class="font-bold text-slate-800">${esc(b.ruang)}</span> (${esc(b.kelas)}) - <span class="text-slate-600">${esc(b.mata_kuliah)}</span>
+                                        <p class="text-[10px] text-slate-400">${fmtDate(b.tanggal)} | ${esc(b.sesi)} | Dosen: ${esc(b.dosen)}</p>
+                                    </div>
+                                    ${statusBadge(b.status)}
+                                </div>`).join('')}
+                        </div>
+                    </div>`;
+            } else if (u.roleKey === 'ob') {
+                const reports = [...(data.laporan_ob || [])].reverse();
+                c.innerHTML = `
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <h4 class="font-bold text-xs text-slate-800 flex items-center justify-between">
+                            <span><i class="fa-solid fa-screwdriver-wrench text-amber-500 mr-1"></i> Dashboard Tugas Sarpras OB</span>
+                            <span class="px-2 py-0.5 bg-amber-100 text-amber-800 text-[10px] rounded-full font-bold">${reports.length} Laporan</span>
+                        </h4>
+                        <div class="space-y-2 max-h-72 overflow-y-auto">
+                            ${reports.map(r => `
+                                <div class="flex justify-between items-center gap-2 text-xs p-2.5 bg-slate-50 rounded-lg border border-slate-200">
+                                    <div>
+                                        <span class="font-bold text-slate-800">${esc(r.lokasi)}</span> - <span class="text-rose-600 font-medium">${esc(r.masalah)}</span>
+                                        <p class="text-[10px] text-slate-400">Pelapor: ${esc(r.pelapor)}</p>
+                                    </div>
+                                    <button onclick="updateOBStatus('${esc(r.id)}')" class="shrink-0 px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-bold transition">${esc(r.status)} →</button>
+                                </div>`).join('')}
+                        </div>
+                    </div>`;
+            } else if (u.roleKey === 'admin') {
+                renderAdminWidget(c);
+            }
+        }
+
+        // ---------- ADMIN: REKAP BERBENTUK TABEL ----------
+        const PAGE_SIZE = 25;
+        const PERIOD_LABEL = { daily: 'Per Hari', weekly: 'Per Minggu', monthly: 'Per Bulan' };
+
+        function getReportRows() {
+            const [from, to] = rangeOf(appSystem.reportPeriod, appSystem.reportDate);
+            const rows = (appSystem.data.peminjaman || []).filter(r => r.tanggal >= from && r.tanggal <= to).sort((a,b) => b.tanggal.localeCompare(a.tanggal) || a.sesi.localeCompare(b.sesi) || a.ruang.localeCompare(b.ruang));
+            return { from, to, rows };
+        }
+
+        function renderAdminWidget(c) {
+            const period = appSystem.reportPeriod;
+            const { from, to, rows } = getReportRows();
+            const approved = rows.filter(r => r.status === 'Approved').length;
+            const pendingRows = rows.filter(r => r.status === 'Pending');
+            const rejected = rows.filter(r => r.status === 'Rejected').length;
+
+            const groupRows = (key) => {
+                const map = new Map();
+                rows.forEach(r => {
+                    const k = r[key];
+                    if (!map.has(k)) map.set(k, { k, total: 0, disetujui: 0, menunggu: 0, ditolak: 0 });
+                    const x = map.get(k); x.total++;
+                    if (r.status === 'Approved') x.disetujui++;
+                    if (r.status === 'Pending') x.menunggu++;
+                    if (r.status === 'Rejected') x.ditolak++;
+                });
+                return [...map.values()];
+            };
+            const byFak = groupRows('fakultas').sort((a,b) => b.total - a.total);
+            const byTgl = groupRows('tanggal').sort((a,b) => a.k.localeCompare(b.k));
+
+            const slots = 250 * SESI.length * Math.max(1, countWeekdays(from, to));
+            const usage = (approved / slots * 100).toFixed(1);
+            const topGedung = byFak[0] ? byFak[0].k : '-';
+
+            const totalPages = Math.max(1, Math.ceil(rows.length / PAGE_SIZE));
+            if (appSystem.reportPage > totalPages) appSystem.reportPage = totalPages;
+            const page = appSystem.reportPage;
+            const pageRows = rows.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+            const sumTable = (title, firstCol, data, fmt) => {
+                const tot = data.reduce((a, r) => ({ t: a.t + r.total, a: a.a + r.disetujui, m: a.m + r.menunggu, d: a.d + r.ditolak }), { t: 0, a: 0, m: 0, d: 0 });
+                return `
+                    <div class="overflow-x-auto">
+                        <h5 class="text-[11px] font-bold text-slate-700 uppercase tracking-wider mb-2">${title}</h5>
+                        <table class="w-full text-left text-xs border-collapse">
+                            <thead class="bg-slate-100 text-slate-600 text-[10px] uppercase font-bold">
+                                <tr><th class="p-2">${firstCol}</th><th class="p-2 text-right">Total</th><th class="p-2 text-right">Disetujui</th><th class="p-2 text-right">Menunggu</th><th class="p-2 text-right">Ditolak</th></tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-100">
+                                ${data.map(r => `<tr><td class="p-2 font-semibold text-slate-800">${fmt(r.k)}</td><td class="p-2 text-right font-bold">${r.total}</td><td class="p-2 text-right text-emerald-700">${r.disetujui}</td><td class="p-2 text-right text-amber-700">${r.menunggu}</td><td class="p-2 text-right text-rose-700">${r.ditolak}</td></tr>`).join('')}
+                            </tbody>
+                            <tfoot class="bg-indigo-50 font-bold text-slate-800">
+                                <tr><td class="p-2">Total</td><td class="p-2 text-right">${tot.t}</td><td class="p-2 text-right">${tot.a}</td><td class="p-2 text-right">${tot.m}</td><td class="p-2 text-right">${tot.d}</td></tr>
+                            </tfoot>
+                        </table>
+                    </div>`;
+            };
+
+            const counts = Object.entries(appSystem.data.counts || {});
+
+            c.innerHTML = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                        <div class="bg-indigo-600 text-white p-4 rounded-xl shadow-sm">
+                            <p class="text-[10px] uppercase tracking-wider text-indigo-200 font-bold">Total Peminjaman (${PERIOD_LABEL[period]})</p>
+                            <p class="text-2xl font-black mt-1">${rows.length} Kelas</p>
+                        </div>
+                        <div class="bg-emerald-600 text-white p-4 rounded-xl shadow-sm">
+                            <p class="text-[10px] uppercase tracking-wider text-emerald-100 font-bold">Disetujui</p>
+                            <p class="text-2xl font-black mt-1">${approved}</p>
+                        </div>
+                        <div class="bg-amber-500 text-white p-4 rounded-xl shadow-sm">
+                            <p class="text-[10px] uppercase tracking-wider text-amber-100 font-bold">Menunggu</p>
+                            <p class="text-2xl font-black mt-1">${pendingRows.length}</p>
+                        </div>
+                        <div class="bg-rose-600 text-white p-4 rounded-xl shadow-sm">
+                            <p class="text-[10px] uppercase tracking-wider text-rose-100 font-bold">Ditolak</p>
+                            <p class="text-2xl font-black mt-1">${rejected}</p>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-3 pb-3 border-b border-slate-100">
+                            <div>
+                                <h4 class="font-bold text-xs text-slate-800 flex items-center gap-2"><i class="fa-solid fa-table text-indigo-600"></i> Rekapitulasi Peminjaman Kelas</h4>
+                                <p class="text-[10px] text-slate-400">Periode: ${fmtDate(from)}${from !== to ? ' – ' + fmtDate(to) : ''} • Pemakaian slot ${usage}% • Gedung teraktif ${esc(topGedung)}</p>
+                            </div>
+                            <div class="flex flex-wrap items-center gap-2">
+                                <div class="bg-slate-100 p-1 rounded-xl flex text-[10px] font-bold">
+                                    ${['daily', 'weekly', 'monthly'].map(p => `<button onclick="setReportPeriod('${p}')" class="px-2.5 py-1 rounded-lg ${period === p ? 'bg-indigo-600 text-white shadow-sm' : 'text-slate-600 hover:text-slate-900'}">${PERIOD_LABEL[p]}</button>`).join('')}
+                                </div>
+                                <input type="date" value="${appSystem.reportDate}" onchange="setReportDate(this.value)" class="text-[11px] px-2 py-1 border border-slate-300 rounded-lg font-semibold">
+                                <button onclick="exportReportData()" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold rounded-xl shadow-sm flex items-center gap-1"><i class="fa-solid fa-file-csv"></i> Unduh CSV</button>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                            ${sumTable('Rekap per Fakultas / Gedung', 'Gedung', byFak, k => esc(k))}
+                            ${period === 'daily' ? '' : sumTable('Rekap per Tanggal', 'Tanggal', byTgl, k => fmtDate(k))}
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-4">
+                        <div class="space-y-2">
+                            <h5 class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Menunggu Persetujuan (${pendingRows.length})</h5>
+                            <div class="space-y-2 max-h-64 overflow-y-auto">
+                                ${pendingRows.length === 0 ? '<p class="text-xs text-slate-400 italic bg-slate-50 p-3 rounded-lg">Tidak ada pengajuan yang menunggu pada periode ini.</p>' :
+                                    pendingRows.map(b => `
+                                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs p-3 bg-indigo-50/50 rounded-lg border border-indigo-100 gap-2">
+                                            <div>
+                                                <span class="font-bold text-slate-800">${esc(b.pemohon_nama)}</span> (${esc(b.kelas)}) → <strong class="text-indigo-600">${esc(b.ruang)}</strong>
+                                                <p class="text-[10px] text-slate-500">${esc(b.mata_kuliah)} | Dosen: ${esc(b.dosen)} | ${fmtDate(b.tanggal)} (${esc(b.sesi)})</p>
+                                                <p class="text-[10px] text-slate-400 italic">Alasan: "${esc(b.keperluan)}"</p>
+                                            </div>
+                                            <div class="flex space-x-2 shrink-0">
+                                                <button onclick="approveBooking('${esc(b.id)}', true)" class="px-3 py-1 bg-emerald-600 text-white rounded-lg text-[10px] font-bold hover:bg-emerald-700 shadow-sm">Setujui</button>
+                                                <button onclick="approveBooking('${esc(b.id)}', false)" class="px-3 py-1 bg-rose-600 text-white rounded-lg text-[10px] font-bold hover:bg-rose-700">Tolak</button>
+                                            </div>
+                                        </div>`).join('')}
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-100 space-y-2">
+                            <div class="flex justify-between items-center">
+                                <h5 class="text-[11px] font-bold text-slate-700 uppercase tracking-wider">Tabel Data Peminjaman (${rows.length} record)</h5>
+                                <div class="flex items-center gap-2 text-[10px] font-bold text-slate-600">
+                                    <button onclick="setReportPage(${page - 1})" ${page <= 1 ? 'disabled' : ''} class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40">‹</button>
+                                    <span>Hal ${page} / ${totalPages}</span>
+                                    <button onclick="setReportPage(${page + 1})" ${page >= totalPages ? 'disabled' : ''} class="px-2 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 disabled:opacity-40">›</button>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs border-collapse">
+                                    <thead class="bg-slate-100 text-slate-600 text-[10px] uppercase font-bold">
+                                        <tr>
+                                            <th class="p-2">No</th><th class="p-2">Tanggal</th><th class="p-2">Sesi</th><th class="p-2">Ruang</th>
+                                            <th class="p-2">Pemohon</th><th class="p-2">Kelas</th><th class="p-2">Mata Kuliah & Dosen</th><th class="p-2">Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-100 text-[11px]">
+                                        ${pageRows.map((b, i) => `
+                                            <tr>
+                                                <td class="p-2 text-slate-400">${(page - 1) * PAGE_SIZE + i + 1}</td>
+                                                <td class="p-2 font-medium text-slate-700 whitespace-nowrap">${fmtDate(b.tanggal)}</td>
+                                                <td class="p-2 whitespace-nowrap text-slate-500">${esc(b.sesi)}</td>
+                                                <td class="p-2 font-bold text-indigo-600">${esc(b.ruang)}</td>
+                                                <td class="p-2 font-semibold text-slate-800">${esc(b.pemohon_nama)}<span class="text-slate-400 text-[10px] block">${esc(b.pemohon_id)}</span></td>
+                                                <td class="p-2">${esc(b.kelas)}</td>
+                                                <td class="p-2">${esc(b.mata_kuliah)}<span class="text-slate-400 text-[10px] block">${esc(b.dosen)}</span></td>
+                                                <td class="p-2">${statusBadge(b.status)}</td>
+                                            </tr>`).join('')}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <div>
+                            <h5 class="text-[11px] font-bold text-slate-700 uppercase tracking-wider"><i class="fa-solid fa-database text-indigo-600 mr-1"></i> Database MySQL</h5>
+                            <p class="text-[10px] text-slate-400">Data aplikasi tersimpan di server MySQL dan diakses melalui api.php. Browser hanya menampilkan data yang diterima dari server.</p>
+                        </div>
+                        <div class="flex flex-wrap gap-2 text-[10px]">
+                            ${counts.map(([t, n]) => `<span class="px-2 py-1 bg-slate-100 rounded-lg font-mono text-slate-600">${t}: <b>${n}</b></span>`).join('')}
+                        </div>
+                    </div>
+                </div>`;
+        }
+
+        function setReportPeriod(p) { appSystem.reportPeriod = p; appSystem.reportPage = 1; renderBerandaWidget(); }
+        function setReportDate(v) { if (!v) return; appSystem.reportDate = v; appSystem.reportPage = 1; renderBerandaWidget(); }
+        function setReportPage(p) { appSystem.reportPage = Math.max(1, p); renderBerandaWidget(); }
+
+        function downloadBlob(content, filename, type) {
+            const blob = content instanceof Blob ? content : new Blob([content], { type });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        }
+
+        function exportReportData() {
+            const { from, to, rows } = getReportRows();
+            const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+            const head = ['ID', 'Tanggal', 'Sesi', 'Ruang', 'Fakultas', 'Prodi', 'Kelas', 'Mata Kuliah', 'Dosen', 'Pemohon', 'ID Pemohon', 'Keperluan', 'Status'];
+            const lines = [head.map(q).join(',')].concat(rows.map(r =>
+                [r.id, r.tanggal, r.sesi, r.ruang, r.fakultas, r.prodi, r.kelas, r.mata_kuliah, r.dosen, r.pemohon_nama, r.pemohon_id, r.keperluan, STATUS_LABEL[r.status] || r.status].map(q).join(',')));
+            downloadBlob('\ufeff' + lines.join('\r\n'), `rekap-peminjaman-${appSystem.reportPeriod}-${from}_${to}.csv`, 'text/csv;charset=utf-8');
+            showToast(`Rekap ${rows.length} data berhasil diunduh (CSV).`, 'success');
+        }
+
+        async function updateOBStatus(id) {
+            try {
+                await apiRequest('ob_status', { id });
+                await appSystem.refresh();
+                renderBerandaWidget();
+                showToast('Status laporan berhasil diperbarui.', 'success');
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        async function approveBooking(id, isApproved) {
+            try {
+                const b = await appSystem.setBookingStatus(id, isApproved);
+                showToast(isApproved ? `Peminjaman ${b.ruang} disetujui!` : `Peminjaman ${b.ruang} ditolak.`, isApproved ? 'success' : 'error');
+            } catch (err) { showToast(err.message, 'error'); }
+            updateUIState();
+        }
+
+        // ---------- GRID RUANG ----------
+        function highlightLantai() {
+            document.querySelectorAll('.lantai-btn').forEach(btn => {
+                const on = btn.dataset.lantai === String(appSystem.filterLantai);
+                btn.className = 'lantai-btn px-2.5 py-1 rounded-lg ' + (on ? 'bg-white text-slate-800 shadow-sm font-bold' : 'text-slate-500 hover:text-slate-800');
+            });
+        }
+
+        function filterRooms(type, val) {
+            if (type === 'fakultas') {
+                appSystem.filterFakultas = val;
+                appSystem.filterProdi = 'ALL';
+                updateProdiFilterDropdown(val);
+            } else if (type === 'prodi') {
+                appSystem.filterProdi = val;
+            } else if (type === 'lantai') {
+                appSystem.filterLantai = val;
+                highlightLantai();
+            }
+            renderClassroomGrid();
+        }
+
+        function updateProdiFilterDropdown(fak) {
+            const sel = $('filterProdiSelect');
+            const list = fak === 'ALL' ? Object.values(GEDUNG).flatMap(g => g.prodi) : GEDUNG[fak].prodi;
+            sel.innerHTML = '<option value="ALL">Semua Jurusan</option>' + list.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+        }
+
+        function searchRooms(q) { appSystem.searchQuery = q.toLowerCase().trim(); renderClassroomGrid(); }
+
+        function setGridSlot() {
+            appSystem.gridDate = $('gridDate').value || TANGGAL_ACUAN;
+            appSystem.gridSesi = $('gridSesi').value;
+            renderClassroomGrid();
+        }
+
+        function renderClassroomGrid() {
+            const grid = $('classroomGrid');
+            if (!grid || !appSystem) return;
+            appSystem.refreshOccupancy();
+
+            let list = appSystem.rooms;
+            if (appSystem.filterFakultas !== 'ALL') list = list.filter(r => r.gedung === appSystem.filterFakultas);
+            if (appSystem.filterLantai !== 'ALL') list = list.filter(r => String(r.lantai) === String(appSystem.filterLantai));
+            if (appSystem.filterProdi !== 'ALL') {
+                const fak = Object.keys(GEDUNG).find(k => GEDUNG[k].prodi.includes(appSystem.filterProdi));
+                list = list.filter(r => r.gedung === fak && (!r.isOccupied || r.booking.prodi === appSystem.filterProdi));
+            }
+            if (appSystem.searchQuery) {
+                const q = appSystem.searchQuery;
+                list = list.filter(r => r.code.toLowerCase().includes(q) ||
+                    (r.isOccupied && [r.booking.mataKuliah, r.booking.dosen, r.booking.kelas].some(v => String(v).toLowerCase().includes(q))));
+            }
+            $('filteredCount').textContent = list.length;
+
+            const canBook = appSystem.currentUser && appSystem.currentUser.canBook;
+            grid.innerHTML = list.map(r => {
+                if (r.isOccupied) {
+                    const b = r.booking;
+                    return `
+                        <div class="bg-slate-900 text-white p-3 rounded-xl border border-slate-800 shadow-sm">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="text-xs font-bold text-indigo-400">${esc(r.code)}</span>
+                                <span class="px-1.5 py-0.5 text-[9px] font-bold bg-amber-500/20 text-amber-300 rounded border border-amber-500/30">${esc(b.kelas)}</span>
+                            </div>
+                            <p class="text-[11px] font-bold text-slate-100 truncate" title="${esc(b.mataKuliah)}">${esc(b.mataKuliah)}</p>
+                            <p class="text-[10px] text-slate-400 truncate">${esc(b.dosen)}</p>
+                            <div class="mt-2 pt-1.5 border-t border-slate-800 text-[9px] text-slate-400 truncate">${esc(b.prodi)}</div>
+                        </div>`;
+                }
+                const pending = appSystem.pendingRooms.has(r.code);
+                return `
+                    <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm hover:border-indigo-300 transition flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="text-xs font-bold text-slate-800">${esc(r.code)}</span>
+                                ${pending ? '<span class="px-1.5 py-0.5 text-[9px] font-bold bg-amber-100 text-amber-700 rounded">Diajukan</span>'
+                                          : '<span class="px-1.5 py-0.5 text-[9px] font-bold bg-emerald-100 text-emerald-700 rounded">Tersedia</span>'}
+                            </div>
+                            <p class="text-[10px] text-slate-400">Gedung ${esc(r.gedung)} • Lantai ${r.lantai}</p>
+                        </div>
+                        ${canBook && !pending ? `<button onclick="openBookingModal('${esc(r.code)}')" class="mt-2 w-full py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-600 font-bold text-[10px] rounded-lg transition">+ Pinjam Ruang</button>`
+                                              : `<span class="mt-2 w-full py-1 text-center bg-slate-50 text-slate-400 font-medium text-[10px] rounded-lg block">${pending ? 'Menunggu persetujuan' : 'Tersedia'}</span>`}
+                    </div>`;
+            }).join('');
+        }
+
+        // ==========================================
+        // LOGIN
+        // ==========================================
+        async function handleLoginSubmit(e) {
+            e.preventDefault();
+            const role = $('loginRoleSelect').value;
+            const err = $('loginError');
+            const submit = e.submitter;
+            if (submit) submit.disabled = true;
+            try {
+                const user = await appSystem.login(role, $('loginName').value.trim(), $('loginCred').value.trim());
+                err.classList.add('hidden');
+                $('loginName').value = ''; $('loginCred').value = '';
+                showSection('beranda');
+                showToast(`Selamat datang, ${user.nama}!`, 'success');
+            } catch (error) {
+                err.textContent = error.message; err.classList.remove('hidden');
+            } finally { if (submit) submit.disabled = false; }
+        }
+
+        async function logout() {
+            try { await apiRequest('logout', {}); } catch (err) { console.warn(err); }
+            appSystem.currentUser = null;
+            $('chatBoxWidget').classList.add('hidden');
+            showSection('login');
+            showToast('Berhasil keluar dari sistem.', 'info');
+        }
+
+        function showSection(section) {
+            const isLogin = section === 'login';
+            $('loginPage').classList.toggle('hidden', !isLogin);
+            $('berandaPage').classList.toggle('hidden', isLogin);
+            $('mainHeader').classList.toggle('hidden', isLogin);
+            $('chatWrap').classList.toggle('hidden', isLogin);
+            if (!isLogin) { updateUIState(); renderChatMessages(); }
+        }
+
+        // ==========================================
+        // MODAL PEMINJAMAN
+        // ==========================================
+        function openBookingModal(roomCode = '') {
+            const u = appSystem.currentUser;
+            if (!u || !u.canBook) { showToast('Akses ditolak: hanya Mahasiswa dan Dosen yang dapat mengajukan peminjaman.', 'error'); return; }
+
+            const fak = roomCode ? roomCode.split('-')[0] : (u.fakultas && GEDUNG[u.fakultas] ? u.fakultas : 'FIK');
+            $('bookFaculty').value = fak;
+            $('bookDate').value = appSystem.gridDate;
+            $('bookTime').value = appSystem.gridSesi;
+            $('bookClassShort').value = u.kelas || '';
+            $('bookSubject').value = '';
+            $('bookReason').value = '';
+
+            const dosen = [...(appSystem.data.dosen || [])].sort((a,b) => a.nama.localeCompare(b.nama));
+            $('bookLecturer').innerHTML = dosen.map(d => `<option value="${esc(d.nama)}">${esc(d.nama)}</option>`).join('');
+            if (u.roleKey === 'dosen') $('bookLecturer').value = u.nama;
+
+            updateProdiDropdown(fak, roomCode);
+            $('bookingModal').classList.remove('hidden');
+        }
+
+        function closeBookingModal() { $('bookingModal').classList.add('hidden'); }
+
+        function updateProdiDropdown(fak, selectedRoom = '') {
+            $('bookProdi').innerHTML = GEDUNG[fak].prodi.map(m => `<option value="${esc(m)}">${esc(m)}</option>`).join('');
+            const u = appSystem.currentUser;
+            if (u && u.prodi && GEDUNG[fak].prodi.includes(u.prodi)) $('bookProdi').value = u.prodi;
+            refreshBookingRooms(selectedRoom);
+        }
+
+        function refreshBookingRooms(selected = '') {
+            const fak = $('bookFaculty').value, tgl = $('bookDate').value, sesi = $('bookTime').value;
+            const sel = $('bookRoomSelect');
+            const keep = selected || sel.value;
+            const taken = new Set((appSystem.data.peminjaman || []).filter(r => r.tanggal === tgl && r.sesi === sesi && ['Approved','Pending'].includes(r.status)).map(r => r.ruang));
+            const free = appSystem.rooms.filter(r => r.gedung === fak && !taken.has(r.code));
+            sel.innerHTML = free.length
+                ? free.map(r => `<option value="${esc(r.code)}">${esc(r.code)} (Kapasitas ${r.capacity})</option>`).join('')
+                : '<option value="">Tidak ada ruang kosong</option>';
+            if (keep && free.some(r => r.code === keep)) sel.value = keep;
+        }
+
+        async function handleBookingSubmit(e) {
+            e.preventDefault();
+            const u = appSystem.currentUser;
+            if (!u || !u.canBook) { showToast('Akses ditolak.', 'error'); return; }
+            const room = $('bookRoomSelect').value;
+            if (!room) { showToast('Pilih ruang kelas yang tersedia.', 'error'); return; }
+            const booking = {
+                fakultas: $('bookFaculty').value, prodi: $('bookProdi').value,
+                kelas: $('bookClassShort').value.trim(), dosen: $('bookLecturer').value,
+                mataKuliah: $('bookSubject').value.trim(), ruang: room, tanggal: $('bookDate').value,
+                sesi: $('bookTime').value, keperluan: $('bookReason').value.trim()
+            };
+            try {
+                await appSystem.addBooking(booking);
+                closeBookingModal(); updateUIState();
+                showToast('Pengajuan peminjaman berhasil dikirim! Menunggu persetujuan Admin.', 'success');
+            } catch (err) {
+                showToast(err.message, 'error');
+                await appSystem.refresh().catch(() => {});
+                refreshBookingRooms();
+            }
+        }
+
+        // ==========================================
+        // CHAT
+        // ==========================================
+        function toggleChatWidget() { $('chatBoxWidget').classList.toggle('hidden'); renderChatMessages(); }
+
+        function switchChatTab(tab) {
+            appSystem.activeChatTab = tab;
+            $('tabNego').className = 'flex-1 py-2 ' + (tab === 'nego' ? 'text-emerald-600 border-b-2 border-emerald-600 font-bold bg-white' : 'hover:text-slate-700');
+            $('tabOB').className = 'flex-1 py-2 ' + (tab === 'ob' ? 'text-emerald-600 border-b-2 border-emerald-600 font-bold bg-white' : 'hover:text-slate-700');
+            renderChatMessages();
+        }
+
+        function renderChatMessages() {
+            const box = $('chatMessages');
+            const u = appSystem && appSystem.currentUser;
+            if (!box || !u) return;
+            const msgs = (appSystem.data.chat || []).filter(m => m.tab === appSystem.activeChatTab).sort((a,b) => Number(a.id) - Number(b.id));
+            box.innerHTML = '<div class="text-center my-1"><span class="bg-slate-200 text-slate-600 text-[9px] px-2 py-0.5 rounded-full font-bold">FORUM</span></div>' +
+                msgs.map(m => {
+                    const mine = m.pengirim_id === u.id;
+                    return `
+                        <div class="flex flex-col items-${mine ? 'end' : 'start'} space-y-0.5">
+                            <span class="text-[9px] ${mine ? 'text-emerald-600 mr-1' : 'text-slate-400 ml-1'} font-bold">${mine ? 'Anda' : esc(m.pengirim_nama)}</span>
+                            <div class="${mine ? 'bg-emerald-100 border-emerald-200 rounded-tr-none' : 'bg-white border-slate-200 rounded-tl-none'} p-2.5 rounded-xl shadow-sm max-w-[85%] border">
+                                <p class="text-slate-800 break-words">${esc(m.pesan)}</p>
+                                <span class="text-[9px] ${mine ? 'text-emerald-700' : 'text-slate-400'} block text-right mt-1">${esc(m.waktu)}</span>
+                            </div>
+                        </div>`;
+                }).join('');
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function handleSendChat(e) {
+            e.preventDefault();
+            const input = $('chatInputText');
+            const text = input.value.trim();
+            if (!text || !appSystem.currentUser) return;
+            try {
+                await apiRequest('chat_send', { tab: appSystem.activeChatTab, text });
+                input.value = '';
+                await appSystem.refresh();
+                renderChatMessages();
+            } catch (err) { showToast(err.message, 'error'); }
+        }
+
+        // ==========================================
+        // TOAST
+        // ==========================================
+        function showToast(msg, type = 'info') {
+            const container = $('toastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            const bg = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-slate-800';
+            toast.className = `${bg} text-white px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold flex items-center space-x-2 transition-opacity duration-300 pointer-events-auto max-w-sm`;
+            toast.innerHTML = `<i class="fa-solid fa-circle-info"></i><span>${esc(msg)}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => { toast.classList.add('opacity-0'); setTimeout(() => toast.remove(), 300); }, 3500);
+        }
+
+        // ==========================================
+        // INISIALISASI
+        // ==========================================
+        window.addEventListener('load', async () => {
+            try {
+                updateLoginFields();
+                const session = await apiRequest('me');
+                if (session.role) {
+                    const snapshot = await apiRequest('snapshot');
+                    appSystem = new SistemClassify(snapshot);
+                    appSystem.setUser(session.role, session.row);
+                    populateStaticSelects();
+                    $('loadingOverlay').classList.add('hidden');
+                    showSection('beranda');
+                } else {
+                    // Snapshot baru diminta setelah login agar endpoint tetap terlindungi.
+                    appSystem = new SistemClassify({ ruang_kelas: [], peminjaman: [], laporan_ob: [], chat: [], dosen: [], counts: {} });
+                    populateStaticSelects();
+                    $('loadingOverlay').classList.add('hidden');
+                }
+            } catch (err) {
+                $('loadingText').textContent = 'Gagal menghubungi api.php: ' + err.message + '. Pastikan Apache/MySQL aktif dan file berada di folder server (htdocs).';
+            }
+        });
+    </script>
+</body>
+</html>
